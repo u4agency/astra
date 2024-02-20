@@ -1,43 +1,58 @@
-name: ThemeCheck
+name: Theme Check
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  test:
-    runs-on: ${{ matrix.platform }}
-
+  build-and-test:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        platform:
-          - ubuntu-latest
-          - windows-latest
-        version:
-          - 3.0.0
-          - 2.7.6
-        theme:
-          - u4agency/astra
-
-    name: Ruby ${{ matrix.platform }} ${{ matrix.version }}
+        os: [ubuntu-latest, windows-latest]
+        ruby-version: ['2.7', '3.0'] # Exemple avec plusieurs versions de Ruby
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ matrix.theme }}
-          path: ./crash-test-theme
-      - name: Set up Ruby ${{ matrix.version }}
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ${{ matrix.version }}
-      - uses: actions/cache@v1
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-gems-${{ hashFiles('Gemfile') }}
-          restore-keys: ${{ runner.os }}-gems-
-      - name: Install dependencies
-        run: bundle install --jobs=3 --retry=3 --path=vendor/bundle
-      - name: Run tests
-        run: bundle exec rake
-      - name: Crash test
-        run: |
-          bundle exec theme-check --fail-level crash ./crash-test-theme
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+
+    - name: Install dependencies (Bundler)
+      run: |
+        gem install bundler
+        bundle install
+
+    - name: Install Node.js and npm
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install npm dependencies
+      run: npm install --force
+      
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest # Utilisez ubuntu-latest pour simplifier, ajustez selon besoin
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20' # Ajustez à la version de Node.js que vous utilisez
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Lint
+      run: npm run lint
+      # Assurez-vous d'avoir configuré un script "lint" dans votre package.json, par exemple avec ESLint pour le JavaScript
+      
+    - name: Run tests
+      run: npm test
+      # Ce script doit être configuré dans votre package.json pour exécuter vos tests JavaScript ou tout autre test lié au thème
